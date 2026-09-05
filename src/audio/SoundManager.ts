@@ -74,43 +74,57 @@ export class SoundManager {
     noise.stop(now + 0.08);
   }
 
-  // Flak Shotgun (Heavy spread punch)
+  // Flak Shotgun (Heavy spread punch & loud explosive blast)
   public playShotgun(): void {
     if (!this.ctx || !this.masterGain || this.isMuted) return;
     const now = this.ctx.currentTime;
 
-    // Sub bass punch
-    const osc = this.ctx.createOscillator();
-    const oscGain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+    // 1. Audible mid-punch attack (600Hz down to 80Hz)
+    const midOsc = this.ctx.createOscillator();
+    const midGain = this.ctx.createGain();
+    midOsc.type = 'sawtooth';
+    midOsc.frequency.setValueAtTime(650, now);
+    midOsc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
 
-    oscGain.gain.setValueAtTime(0.9, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
-    osc.connect(oscGain);
-    oscGain.connect(this.masterGain);
+    midGain.gain.setValueAtTime(0.8, now);
+    midGain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+    midOsc.connect(midGain);
+    midGain.connect(this.masterGain);
 
-    // Heavy noise
+    // 2. Heavy sub-bass impact
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(220, now);
+    subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.3);
+
+    subGain.gain.setValueAtTime(1.0, now);
+    subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    subOsc.connect(subGain);
+    subGain.connect(this.masterGain);
+
+    // 3. Crunchy high-frequency blast crack (noise)
     const noise = this.ctx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer(0.2);
+    noise.buffer = this.createNoiseBuffer(0.25);
     const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1200, now);
-    filter.frequency.exponentialRampToValueAtTime(200, now + 0.2);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2200, now);
+    filter.Q.setValueAtTime(1.5, now);
 
     const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.7, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    noiseGain.gain.setValueAtTime(0.9, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
 
     noise.connect(filter);
     filter.connect(noiseGain);
     noiseGain.connect(this.masterGain);
 
-    osc.start(now);
-    osc.stop(now + 0.22);
+    midOsc.start(now);
+    midOsc.stop(now + 0.18);
+    subOsc.start(now);
+    subOsc.stop(now + 0.3);
     noise.start(now);
-    noise.stop(now + 0.2);
+    noise.stop(now + 0.25);
   }
 
   // Railgun Shot (Piercing high tech beam crack)

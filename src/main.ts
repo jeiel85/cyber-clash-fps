@@ -477,8 +477,100 @@ class GameManager {
 
     this.localPlayer.firePrimary(aimDir, origin);
 
-    // Hitscan detection against enemies
     const enemies = this.allHeroes.filter((h) => h.team !== this.localPlayer.team && h.isAlive);
+
+    // Multi-pellet shotgun hit detection for Vanguard
+    if (this.localPlayer instanceof Vanguard) {
+      this.cameraPitch += 0.025; // Subtle recoil kick
+
+      const pelletCount = 8;
+      const pelletDmg = 14;
+      const hitMap: Map<HeroBase, { count: number; isHeadshot: boolean }> = new Map();
+
+      for (let i = 0; i < pelletCount; i++) {
+        const spread = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.14,
+          (Math.random() - 0.5) * 0.14,
+          (Math.random() - 0.5) * 0.14
+        );
+        const pelletDir = aimDir.clone().add(spread).normalize();
+        const pRay = new THREE.Ray(origin, pelletDir);
+        const worldRay = this.physics.raycastWorld(origin, pelletDir, 50);
+
+        let hitEnemy: HeroBase | null = null;
+        let hitDist = worldRay.distance;
+        let isHead = false;
+
+        for (const enemy of enemies) {
+          const headCenter = enemy.position.clone().add(new THREE.Vector3(0, 1.75, 0));
+          const headSphere = new THREE.Sphere(headCenter, 0.4);
+          const headHit = pRay.intersectSphere(headSphere, new THREE.Vector3());
+
+          const bodyBox = new THREE.Box3(
+            enemy.position.clone().add(new THREE.Vector3(-0.6, 0, -0.6)),
+            enemy.position.clone().add(new THREE.Vector3(0.6, 1.6, 0.6))
+          );
+          const bodyHit = pRay.intersectBox(bodyBox, new THREE.Vector3());
+
+          if (headHit) {
+            const d = origin.distanceTo(headHit);
+            if (d < hitDist) {
+              hitDist = d;
+              hitEnemy = enemy;
+              isHead = true;
+            }
+          } else if (bodyHit) {
+            const d = origin.distanceTo(bodyHit);
+            if (d < hitDist) {
+              hitDist = d;
+              hitEnemy = enemy;
+              isHead = false;
+            }
+          }
+        }
+
+        if (hitEnemy) {
+          const entry = hitMap.get(hitEnemy) || { count: 0, isHeadshot: false };
+          entry.count++;
+          if (isHead) entry.isHeadshot = true;
+          hitMap.set(hitEnemy, entry);
+        }
+      }
+
+      // Apply damage for each hit enemy
+      for (const [enemy, hitInfo] of hitMap.entries()) {
+        const totalDmg = hitInfo.count * pelletDmg * (hitInfo.isHeadshot ? 1.5 : 1.0);
+        const dmgRes = enemy.takeDamage(totalDmg, hitInfo.isHeadshot, this.localPlayer);
+
+        sounds.playHitmarker(hitInfo.isHeadshot);
+        this.hud.showHitmarker(hitInfo.isHeadshot);
+        this.hud.showDamageNumber(
+          window.innerWidth / 2 + (Math.random() - 0.5) * 40,
+          window.innerHeight / 2 - 30,
+          dmgRes.damageTaken,
+          hitInfo.isHeadshot
+        );
+
+        if (dmgRes.killed) {
+          sounds.playKillChime();
+          this.hud.addKillfeed(this.localPlayer.name, enemy.name, this.localPlayer.team, hitInfo.isHeadshot);
+        }
+
+        if (this.network.role !== 'solo') {
+          this.network.send({
+            type: 'DAMAGE_EVENT',
+            attackerId: this.localPlayer.id,
+            victimId: enemy.id,
+            damage: dmgRes.damageTaken,
+            isHeadshot: hitInfo.isHeadshot,
+            killed: dmgRes.killed,
+          });
+        }
+      }
+      return;
+    }
+
+    // Single-ray hitscan detection for Striker, Specter, Remedy
     const ray = new THREE.Ray(origin, aimDir);
 
     let closestHitEnemy: HeroBase | null = null;
@@ -520,8 +612,7 @@ class GameManager {
     if (closestHitEnemy && closestDist < worldRay.distance) {
       // Calculate damage based on hero
       let baseDmg = 20;
-      if (this.localPlayer instanceof Vanguard) baseDmg = 14;
-      else if (this.localPlayer instanceof Specter) baseDmg = this.localPlayer.isScoped ? (40 + 80 * (this.localPlayer.scopeCharge / 100)) : 14;
+      if (this.localPlayer instanceof Specter) baseDmg = this.localPlayer.isScoped ? (40 + 80 * (this.localPlayer.scopeCharge / 100)) : 14;
       else if (this.localPlayer instanceof Remedy) baseDmg = 25;
 
       const dmgRes = closestHitEnemy.takeDamage(baseDmg, isHeadshot, this.localPlayer);

@@ -157,24 +157,68 @@ export class Vanguard extends HeroBase {
     this.model3D.add(this.shieldMesh);
   }
 
+  private muzzleFlash?: THREE.Group;
+
   protected createFirstPersonWeapon(): void {
     const matHeavy = new THREE.MeshStandardMaterial({
-      color: 0x1a212d,
-      metalness: 0.9,
+      color: 0x222a38,
+      metalness: 0.85,
       roughness: 0.2,
     });
-    const matGlow = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    const matAccent = new THREE.MeshStandardMaterial({
+      color: 0xff4422,
+      emissive: 0xcc2200,
+      emissiveIntensity: 0.5,
+    });
+    const matCoreGlow = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
 
-    // Large Shotgun Barrel
-    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.7), matHeavy);
-    barrel.position.set(0, 0, -0.35);
-    this.fpWeaponMesh.add(barrel);
+    // Main Heavy Receiver Body
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.65), matHeavy);
+    receiver.position.set(0, 0, -0.3);
+    this.fpWeaponMesh.add(receiver);
 
-    const muzzles = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.1), matGlow);
-    muzzles.position.set(0, 0, -0.72);
-    this.fpWeaponMesh.add(muzzles);
+    // Twin Plasma Barrels (Upper & Lower)
+    const barrelGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.65, 12);
+    const topBarrel = new THREE.Mesh(barrelGeo, matHeavy);
+    topBarrel.rotation.x = Math.PI / 2;
+    topBarrel.position.set(0, 0.06, -0.7);
+    this.fpWeaponMesh.add(topBarrel);
 
-    this.fpWeaponMesh.position.set(0.3, -0.3, -0.4);
+    const bottomBarrel = new THREE.Mesh(barrelGeo, matHeavy);
+    bottomBarrel.rotation.x = Math.PI / 2;
+    bottomBarrel.position.set(0, -0.06, -0.7);
+    this.fpWeaponMesh.add(bottomBarrel);
+
+    // Glowing energy heat vents on side
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.35), matCoreGlow);
+    vent.position.set(0, 0.04, -0.32);
+    this.fpWeaponMesh.add(vent);
+
+    // Armored Heat Shield shroud
+    const shroud = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.25), matAccent);
+    shroud.position.set(0, 0, -0.55);
+    this.fpWeaponMesh.add(shroud);
+
+    // Muzzle Flash Effect (Normally hidden)
+    this.muzzleFlash = new THREE.Group();
+    const flashCenter = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    const flashSparks = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.35),
+      new THREE.MeshBasicMaterial({ color: 0xffaa00, wireframe: true })
+    );
+    const flashLight = new THREE.PointLight(0xff7700, 3, 10);
+    this.muzzleFlash.add(flashCenter);
+    this.muzzleFlash.add(flashSparks);
+    this.muzzleFlash.add(flashLight);
+    this.muzzleFlash.position.set(0, 0, -1.05);
+    this.muzzleFlash.visible = false;
+    this.fpWeaponMesh.add(this.muzzleFlash);
+
+    // Set position relative to camera
+    this.fpWeaponMesh.position.set(0.32, -0.32, -0.45);
   }
 
   public override update(dt: number): void {
@@ -199,7 +243,6 @@ export class Vanguard extends HeroBase {
 
     // Ultimate electric discharge
     if (this.ultimateActive) {
-      // Periodic pulse visual
       if (Math.random() < 0.3) {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(0.5, 4.0, 16),
@@ -223,7 +266,12 @@ export class Vanguard extends HeroBase {
 
   public firePrimary(direction: THREE.Vector3, origin: THREE.Vector3): void {
     if (!this.isAlive || this.fireTimer > 0 || this.isReloading) return;
-    if (this.isShieldActive) return; // Cannot shoot while holding shield
+
+    // If holding shield, drop shield so player can shoot without frustration
+    if (this.isShieldActive) {
+      this.setShieldActive(false);
+    }
+
     if (this.ammo <= 0) {
       this.reload();
       return;
@@ -231,33 +279,60 @@ export class Vanguard extends HeroBase {
 
     this.ammo--;
     this.fireTimer = this.fireRate;
-    this.triggerWeaponRecoil();
+
+    // Heavy shotgun recoil kick
+    if (this.isLocalPlayer && this.fpWeaponMesh) {
+      this.fpWeaponMesh.position.z += 0.32;
+      this.fpWeaponMesh.position.y += 0.08;
+      this.fpWeaponMesh.rotation.x += 0.42;
+
+      // Show muzzle flash
+      if (this.muzzleFlash) {
+        this.muzzleFlash.visible = true;
+        setTimeout(() => {
+          if (this.muzzleFlash) this.muzzleFlash.visible = false;
+        }, 90);
+      }
+    }
 
     if (this.isLocalPlayer) {
       sounds.playShotgun();
     }
 
-    // Shotgun pellet spread (8 pellets)
+    // Spawn 8 visible glowing plasma flak pellets
     const pelletCount = 8;
     for (let i = 0; i < pelletCount; i++) {
       const spread = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.12,
-        (Math.random() - 0.5) * 0.12,
-        (Math.random() - 0.5) * 0.12
+        (Math.random() - 0.5) * 0.14,
+        (Math.random() - 0.5) * 0.14,
+        (Math.random() - 0.5) * 0.14
       );
       const pelletDir = direction.clone().add(spread).normalize();
-      const raycast = this.physics.raycastWorld(origin, pelletDir, 45);
+      const raycast = this.physics.raycastWorld(origin, pelletDir, 50);
 
-      // Brief pellet line
-      const geo = new THREE.BufferGeometry().setFromPoints([origin, raycast.point]);
-      const mat = new THREE.LineBasicMaterial({ color: 0xffaa00 });
-      const line = new THREE.Line(geo, mat);
-      this.scene.add(line);
+      // Create glowing plasma projectile tracer
+      const tracerGeo = new THREE.BufferGeometry().setFromPoints([origin, raycast.point]);
+      const tracerMat = new THREE.LineBasicMaterial({
+        color: 0xff7700,
+        linewidth: 3,
+      });
+      const tracerLine = new THREE.Line(tracerGeo, tracerMat);
+      this.scene.add(tracerLine);
+
+      // Impact spark sphere at impact point
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffcc00 })
+      );
+      spark.position.copy(raycast.point);
+      this.scene.add(spark);
+
       setTimeout(() => {
-        this.scene.remove(line);
-        geo.dispose();
-        mat.dispose();
-      }, 40);
+        this.scene.remove(tracerLine);
+        this.scene.remove(spark);
+        tracerGeo.dispose();
+        tracerMat.dispose();
+      }, 160);
     }
   }
 
