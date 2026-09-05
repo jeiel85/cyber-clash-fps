@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CYBER CLASH: 3D HERO FPS</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+    <link rel="stylesheet" href="./src/style.css" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- 3D Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Crosshair & Hitmarker Layer -->
+    <div id="crosshair-container">
+      <div id="crosshair" class="crosshair-default">
+        <div class="cross-line top"></div>
+        <div class="cross-line bottom"></div>
+        <div class="cross-line left"></div>
+        <div class="cross-line right"></div>
+        <div class="cross-dot"></div>
+      </div>
+      <div id="hitmarker" class="hitmarker hidden">
+        <div class="hm-line tl"></div>
+        <div class="hm-line tr"></div>
+        <div class="hm-line bl"></div>
+        <div class="hm-line br"></div>
+      </div>
+      <div id="scope-overlay" class="scope-overlay hidden">
+        <div class="scope-circle"></div>
+        <div class="scope-lines"></div>
+        <div class="scope-charge"><div id="scope-charge-fill"></div><span>CHARGE: <b id="scope-charge-val">0%</b></span></div>
+      </div>
+    </div>
+
+    <!-- Floating Damage Numbers Container -->
+    <div id="damage-numbers-container"></div>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hidden">
+      <!-- Top Center: Objective Bar -->
+      <div id="objective-hud">
+        <div class="team-score team-blue">
+          <span class="team-name">BLUE TEAM</span>
+          <span class="team-pct" id="score-blue">0%</span>
+          <div class="team-bar-bg"><div class="team-bar-fill" id="bar-blue"></div></div>
+        </div>
+        <div class="point-status-box" id="point-box">
+          <div class="point-icon" id="point-icon">A</div>
+          <div class="point-capture-ring" id="point-ring"></div>
+          <div class="point-state-text" id="point-state">CONTESTED</div>
+        </div>
+        <div class="team-score team-red">
+          <span class="team-pct" id="score-red">0%</span>
+          <span class="team-name">RED TEAM</span>
+          <div class="team-bar-bg"><div class="team-bar-fill" id="bar-red"></div></div>
+        </div>
+      </div>
+
+      <!-- Top Right: Killfeed -->
+      <div id="killfeed"></div>
+
+      <!-- Top Left: Match & Network Status -->
+      <div id="match-info">
+        <div class="info-tag" id="room-tag">ROOM: SOLO-PRACTICE</div>
+        <div class="info-tag" id="ping-tag">P2P: HOST (0ms)</div>
+        <div class="info-tag" id="players-tag">PLAYERS: 1 | BOTS: 5</div>
+      </div>
+
+      <!-- Bottom Left: Hero Status & Health -->
+      <div id="hero-hud">
+        <div class="hero-portrait" id="hero-portrait">
+          <img id="hero-avatar" src="" alt="Hero" />
+          <div class="hero-level" id="hero-role-badge">DPS</div>
+        </div>
+        <div class="hero-details">
+          <div class="hero-name" id="hero-name">STRIKER</div>
+          <div class="health-container">
+            <div class="health-numbers">
+              <span id="hp-current">200</span> / <span id="hp-max">200</span>
+            </div>
+            <div class="health-bar-wrapper">
+              <div class="health-bar-fill" id="health-fill"></div>
+              <div class="shield-bar-fill" id="shield-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Bottom: Ultimate Gauge -->
+      <div id="ultimate-hud">
+        <div class="ult-circle" id="ult-circle">
+          <svg viewBox="0 0 100 100" class="ult-svg">
+            <circle class="ult-bg" cx="50" cy="50" r="42" />
+            <circle class="ult-progress" id="ult-progress" cx="50" cy="50" r="42" />
+          </svg>
+          <div class="ult-content">
+            <div class="ult-percent" id="ult-percent">0%</div>
+            <div class="ult-key">Q</div>
+          </div>
+        </div>
+        <div class="ult-ready-text hidden" id="ult-ready-text">ULTIMATE READY</div>
+      </div>
+
+      <!-- Bottom Right: Abilities & Weapon Ammo -->
+      <div id="abilities-hud">
+        <!-- Secondary / Right Click -->
+        <div class="ability-slot" id="ability-secondary">
+          <div class="ability-cooldown-overlay" id="cd-secondary"></div>
+          <div class="ability-key">RMB</div>
+          <div class="ability-name" id="name-secondary">HELIX ROCKET</div>
+          <div class="ability-timer hidden" id="timer-secondary">0</div>
+        </div>
+
+        <!-- Ability 1: Shift -->
+        <div class="ability-slot" id="ability-shift">
+          <div class="ability-cooldown-overlay" id="cd-shift"></div>
+          <div class="ability-key">SHIFT</div>
+          <div class="ability-name" id="name-shift">SPRINT</div>
+          <div class="ability-timer hidden" id="timer-shift">0</div>
+        </div>
+
+        <!-- Ability 2: E -->
+        <div class="ability-slot" id="ability-e">
+          <div class="ability-cooldown-overlay" id="cd-e"></div>
+          <div class="ability-key">E</div>
+          <div class="ability-name" id="name-e">BIOTIC FIELD</div>
+          <div class="ability-timer hidden" id="timer-e">0</div>
+        </div>
+
+        <!-- Weapon Ammo -->
+        <div class="weapon-slot">
+          <div class="ammo-display">
+            <span class="ammo-current" id="ammo-current">25</span>
+            <span class="ammo-slash">/</span>
+            <span class="ammo-max" id="ammo-max">25</span>
+          </div>
+          <div class="weapon-name" id="weapon-name">PULSE RIFLE</div>
+          <div class="reload-prompt hidden" id="reload-prompt">PRESS [R] TO RELOAD</div>
+        </div>
+      </div>
+
+      <!-- Screen Damage Overlay (Flash red when hit) -->
+      <div id="damage-vignette" class="vignette"></div>
+      <div id="heal-vignette" class="vignette-heal"></div>
+
+      <!-- Announcement Banner -->
+      <div id="announcement" class="announcement hidden">
+        <h1 id="announce-title">ROUND START</h1>
+        <p id="announce-desc">CAPTURE THE POINT!</p>
+      </div>
+
+      <!-- Quick Hint -->
+      <div id="quick-hint">[H] 영웅 변경 | [TAB] 점수판 | [ESC] 메뉴</div>
+    </div>
+
+    <!-- Scoreboard (Tab) -->
+    <div id="scoreboard-modal" class="modal-overlay hidden">
+      <div class="scoreboard-content">
+        <div class="score-header">
+          <h2>MATCH SCOREBOARD</h2>
+          <span class="mode-info">POINT CAPTURE (3v3)</span>
+        </div>
+        <div class="scoreboard-tables">
+          <div class="team-table team-blue-table">
+            <h3 class="blue-title">BLUE TEAM (YOUR ALLIES)</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>PLAYER</th>
+                  <th>HERO</th>
+                  <th>ELIMS</th>
+                  <th>DEATHS</th>
+                  <th>DMG</th>
+                  <th>PING</th>
+                </tr>
+              </thead>
+              <tbody id="scoreboard-blue-rows"></tbody>
+            </table>
+          </div>
+          <div class="team-table team-red-table">
+            <h3 class="red-title">RED TEAM (OPPONENTS)</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>PLAYER</th>
+                  <th>HERO</th>
+                  <th>ELIMS</th>
+                  <th>DEATHS</th>
+                  <th>DMG</th>
+                  <th>PING</th>
+                </tr>
+              </thead>
+              <tbody id="scoreboard-red-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Selection Modal -->
+    <div id="hero-select-modal" class="modal-overlay">
+      <div class="hero-select-container">
+        <div class="select-header">
+          <h1>CHOOSE YOUR HERO</h1>
+          <p>전황에 맞는 역할을 선택하여 팀을 승리로 이끄세요</p>
+        </div>
+
+        <div class="hero-cards-grid">
+          <!-- Striker -->
+          <div class="hero-card active" data-hero="striker">
+            <div class="hero-badge dps">DAMAGE</div>
+            <div class="hero-card-img striker-img"></div>
+            <h2>STRIKER</h2>
+            <div class="hero-role">공격형 전술 군인</div>
+            <div class="hero-desc">안정적인 지속 딜링과 나선 로켓, 자가 치유 생체장 및 자동 조준경을 장비한 올라운더.</div>
+            <div class="hero-specs">
+              <div class="spec-row"><span>HP</span><b>200</b></div>
+              <div class="spec-row"><span>WEAPON</span><b>Heavy Pulse Rifle (25)</b></div>
+              <div class="spec-row"><span>R-CLICK</span><b>Helix Rockets (AoE)</b></div>
+              <div class="spec-row"><span>SHIFT</span><b>Tactical Sprint</b></div>
+              <div class="spec-row"><span>E-SKILL</span><b>Biotic Field (힐 장판)</b></div>
+              <div class="spec-row"><span>ULTIMATE [Q]</span><b>Tactical Visor (자동 조준)</b></div>
+            </div>
+            <button class="select-btn">SELECT STRIKER</button>
+          </div>
+
+          <!-- Vanguard -->
+          <div class="hero-card" data-hero="vanguard">
+            <div class="hero-badge tank">TANK</div>
+            <div class="hero-card-img vanguard-img"></div>
+            <h2>VANGUARD</h2>
+            <div class="hero-role">중장갑 돌격형 탱커</div>
+            <div class="hero-desc">전방 에너지 방벽으로 아군을 보호하고 부스터 돌진과 지진 강타로 진형을 붕괴시키는 거한.</div>
+            <div class="hero-specs">
+              <div class="spec-row"><span>HP</span><b>500 (300+200방벽)</b></div>
+              <div class="spec-row"><span>WEAPON</span><b>Twin Plasma Flak (근접 산탄)</b></div>
+              <div class="spec-row"><span>R-CLICK</span><b>Projected Barrier (방벽 전개)</b></div>
+              <div class="spec-row"><span>SHIFT</span><b>Thruster Charge (부스터 돌진)</b></div>
+              <div class="spec-row"><span>E-SKILL</span><b>Seismic Slam (지진 강타)</b></div>
+              <div class="spec-row"><span>ULTIMATE [Q]</span><b>Overdrive (전기 폭풍 & 실드)</b></div>
+            </div>
+            <button class="select-btn">SELECT VANGUARD</button>
+          </div>
+
+          <!-- Specter -->
+          <div class="hero-card" data-hero="specter">
+            <div class="hero-badge sniper">SNIPER</div>
+            <div class="hero-card-img specter-img"></div>
+            <h2>SPECTER</h2>
+            <div class="hero-role">치명적 암살 & 저격수</div>
+            <div class="hero-desc">충전식 고배율 레일건 저격과 순간 점멸로 전장을 유린하며 독성 지뢰를 설치하는 암살자.</div>
+            <div class="hero-specs">
+              <div class="spec-row"><span>HP</span><b>175</b></div>
+              <div class="spec-row"><span>WEAPON</span><b>Particle SMG / Railgun</b></div>
+              <div class="spec-row"><span>R-CLICK</span><b>Railgun Scope (저격 줌 & 헤드샷 2.5x)</b></div>
+              <div class="spec-row"><span>SHIFT</span><b>Phase Blink (순간 도약)</b></div>
+              <div class="spec-row"><span>E-SKILL</span><b>Venom Mine (독성 지뢰)</b></div>
+              <div class="spec-row"><span>ULTIMATE [Q]</span><b>Infrasight (벽 투시 & 충전 가속)</b></div>
+            </div>
+            <button class="select-btn">SELECT SPECTER</button>
+          </div>
+
+          <!-- Remedy -->
+          <div class="hero-card" data-hero="remedy">
+            <div class="hero-badge support">SUPPORT</div>
+            <div class="hero-card-img remedy-img"></div>
+            <h2>REMEDY</h2>
+            <div class="hero-role">치유 및 전술 지원가</div>
+            <div class="hero-desc">광역 치유 드론과 연쇄 치유 빔, 아군 비행 돌진과 발키리 각성으로 팀의 생존을 책임지는 수호천사.</div>
+            <div class="hero-specs">
+              <div class="spec-row"><span>HP</span><b>200 (비전투 시 자가 회복)</b></div>
+              <div class="spec-row"><span>WEAPON</span><b>Caduceus Beam / Blaster</b></div>
+              <div class="spec-row"><span>R-CLICK</span><b>Biotic Orb (원거리 힐 탄두)</b></div>
+              <div class="spec-row"><span>SHIFT</span><b>Angelic Glide (비행 가속 도약)</b></div>
+              <div class="spec-row"><span>E-SKILL</span><b>Regen Ward (광역 힐 드론)</b></div>
+              <div class="spec-row"><span>ULTIMATE [Q]</span><b>Valkyrie (비행 비상 & 다중 힐링)</b></div>
+            </div>
+            <button class="select-btn">SELECT REMEDY</button>
+          </div>
+        </div>
+
+        <div class="select-footer">
+          <button id="confirm-hero-btn" class="glow-btn-primary">CONFIRM & ENTER ARENA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Menu / Matchmaking Modal -->
+    <div id="menu-modal" class="modal-overlay">
+      <div class="menu-box">
+        <div class="game-logo">
+          <div class="logo-icon">⚡</div>
+          <h1>CYBER CLASH</h1>
+          <div class="logo-sub">SERVERLESS P2P 3D HERO FPS</div>
+        </div>
+
+        <div class="menu-tabs">
+          <div class="tab-item active" data-tab="play">PLAY NOW</div>
+          <div class="tab-item" data-tab="multiplayer">P2P MULTIPLAYER</div>
+          <div class="tab-item" data-tab="guide">HOW TO PLAY</div>
+        </div>
+
+        <!-- Play Tab -->
+        <div class="tab-content" id="tab-play">
+          <div class="play-options">
+            <div class="play-card" id="btn-quick-play">
+              <div class="pc-icon">🎮</div>
+              <div class="pc-info">
+                <h3>QUICK MATCH (ONLINE P2P)</h3>
+                <p>오픈 세션에 자동 참가하거나 방을 개설합니다. 상대 플레이어가 없으면 즉시 AI 봇이 함께 참전합니다.</p>
+              </div>
+            </div>
+
+            <div class="play-card" id="btn-solo-bot">
+              <div class="pc-icon">🤖</div>
+              <div class="pc-info">
+                <h3>PRACTICE VS BOTS (SOLO)</h3>
+                <p>네트워크 대기 없이 즉시 3v3 거점 점령전을 시작합니다. 각기 다른 영웅 봇들과 겨루어 보세요.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Multiplayer Tab -->
+        <div class="tab-content hidden" id="tab-multiplayer">
+          <div class="p2p-section">
+            <div class="p2p-status-box">
+              <div class="status-indicator online"></div>
+              <span>P2P WebRTC Broker Ready: <b id="peer-id-display">Connecting...</b></span>
+            </div>
+
+            <div class="p2p-actions">
+              <div class="input-group">
+                <label>HOST A CUSTOM ROOM</label>
+                <div class="input-row">
+                  <input type="text" id="host-room-input" readonly value="" placeholder="Generating room code..." />
+                  <button id="btn-create-room" class="sub-btn">NEW ROOM</button>
+                  <button id="btn-copy-link" class="sub-btn">COPY INVITE LINK</button>
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label>JOIN EXISTING ROOM</label>
+                <div class="input-row">
+                  <input type="text" id="join-room-input" placeholder="Enter Room Code (e.g. cyber-room-123)" />
+                  <button id="btn-join-room" class="glow-btn-small">JOIN ROOM</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="bot-toggle-row">
+              <label class="toggle-container">
+                <input type="checkbox" id="auto-fill-bots" checked />
+                <span class="toggle-slider"></span>
+              </label>
+              <span>상대방 대기 중 AI 봇 자동 채우기 (3v3 구성)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide Tab -->
+        <div class="tab-content hidden" id="tab-guide">
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h4>🕹️ 기본 조작법</h4>
+              <ul>
+                <li><b>W / A / S / D</b>: 이동</li>
+                <li><b>마우스 좌클릭</b>: 기본 무기 발사</li>
+                <li><b>마우스 우클릭</b>: 보조 무기 / 스킬 (저격 줌, 방벽, 힐 오브 등)</li>
+                <li><b>SPACE</b>: 점프 (점프 패드 탑승 시 슈퍼 도약)</li>
+                <li><b>SHIFT</b>: 스킬 1 (질주 / 부스터 돌진 / 점멸 / 비행)</li>
+                <li><b>E</b>: 스킬 2 (생체장 / 지진 강타 / 지뢰 / 힐 드론)</li>
+                <li><b>Q</b>: 궁극기 (100% 충전 시 사용 가능)</li>
+                <li><b>R</b>: 재장전</li>
+                <li><b>H</b>: 영웅 변경 (리스폰 대기실 또는 경기 중)</li>
+                <li><b>TAB</b>: 전적 및 스코어보드 확인</li>
+              </ul>
+            </div>
+            <div class="guide-card">
+              <h4>🎯 게임 목표: 거점 점령 (3v3)</h4>
+              <p>맵 중앙의 에너지 거점에 들어가 있으면 점령 수치가 상승합니다. 100%에 도달하는 팀이 승리합니다!</p>
+              <p>맵 곳곳에 배치된 <b>초록색 힐팩</b>으로 체력을 회복하고, <b>노란색 점프 패드</b>로 고지대를 선점하세요.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-footer">
+          <button id="start-game-btn" class="glow-btn-primary full-width">ENTER ARENA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause / In-Game Menu Modal -->
+    <div id="pause-modal" class="modal-overlay hidden">
+      <div class="pause-box">
+        <h2>GAME PAUSED</h2>
+        <p>화면을 클릭하면 게임으로 복귀합니다</p>
+        <div class="pause-buttons">
+          <button id="btn-resume" class="glow-btn-primary">RESUME GAME</button>
+          <button id="btn-change-hero" class="sub-btn">CHANGE HERO [H]</button>
+          <button id="btn-exit-lobby" class="sub-btn">RETURN TO LOBBY</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script Entry Point -->
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
