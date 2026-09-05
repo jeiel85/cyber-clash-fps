@@ -17,17 +17,17 @@ export class Engine {
     }
     this.canvas = el;
 
-    // Scene
+    // Scene: Bright, clear sci-fi stadium sky
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x060913);
-    this.scene.fog = new THREE.FogExp2(0x060913, 0.012);
+    this.scene.background = new THREE.Color(0x7da4e8); // Vibrant sci-fi blue sky
+    this.scene.fog = new THREE.FogExp2(0x90b5f5, 0.0035); // Light atmospheric haze instead of pitch black
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.1,
-      500
+      600
     );
     this.camera.position.set(0, 2, 0);
 
@@ -42,7 +42,7 @@ export class Engine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.25;
 
     // Clock
     this.clock = new THREE.Clock();
@@ -55,37 +55,42 @@ export class Engine {
   }
 
   private setupLighting(): void {
-    // Ambient light
-    const ambientLight = new THREE.AmbientLight(0x405577, 0.8);
+    // Crisp, bright ambient light so shadows are never pitch black
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.35);
     this.scene.add(ambientLight);
 
-    // Hemisphere light for soft ground reflection
-    const hemiLight = new THREE.HemisphereLight(0x5599ff, 0x111122, 0.6);
-    hemiLight.position.set(0, 50, 0);
+    // Hemisphere light: bright blue sky reflection + soft ground bounce
+    const hemiLight = new THREE.HemisphereLight(0xbad7ff, 0x99aabf, 1.1);
+    hemiLight.position.set(0, 60, 0);
     this.scene.add(hemiLight);
 
-    // Sun / Key Directional light
-    const dirLight = new THREE.DirectionalLight(0xfff0dd, 1.6);
-    dirLight.position.set(40, 60, 30);
+    // Main Sun Directional light
+    const dirLight = new THREE.DirectionalLight(0xfffaee, 2.0);
+    dirLight.position.set(45, 70, 35);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
     dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 180;
-    dirLight.shadow.camera.left = -60;
-    dirLight.shadow.camera.right = 60;
-    dirLight.shadow.camera.top = 60;
-    dirLight.shadow.camera.bottom = -60;
-    dirLight.shadow.bias = -0.0005;
+    dirLight.shadow.camera.far = 220;
+    dirLight.shadow.camera.left = -70;
+    dirLight.shadow.camera.right = 70;
+    dirLight.shadow.camera.top = 70;
+    dirLight.shadow.camera.bottom = -70;
+    dirLight.shadow.bias = -0.0004;
     this.scene.add(dirLight);
 
-    // Cyber accent lights
-    const cyanLight = new THREE.PointLight(0x00f0ff, 2, 50);
-    cyanLight.position.set(-20, 10, -20);
+    // Secondary fill light from opposite angle to prevent dark backfaces
+    const fillLight = new THREE.DirectionalLight(0x99bbff, 0.85);
+    fillLight.position.set(-40, 45, -35);
+    this.scene.add(fillLight);
+
+    // Center arena beacon lights
+    const cyanLight = new THREE.PointLight(0x00f0ff, 2.5, 60);
+    cyanLight.position.set(-20, 12, -20);
     this.scene.add(cyanLight);
 
-    const orangeLight = new THREE.PointLight(0xff7700, 2, 50);
-    orangeLight.position.set(20, 10, 20);
+    const orangeLight = new THREE.PointLight(0xff7700, 2.5, 60);
+    orangeLight.position.set(20, 12, 20);
     this.scene.add(orangeLight);
   }
 

@@ -57,45 +57,66 @@ export class Vanguard extends HeroBase {
   }
 
   protected createThirdPersonModel(): void {
-    const teamColor = this.team === 'blue' ? 0x0066ff : 0xcc2233;
+    const isRed = this.team === 'red';
+    const primaryColor = isRed ? 0xff2244 : 0x0077ff;
+    const emissiveColor = isRed ? 0xcc0022 : 0x0033bb;
+    const visorColor = isRed ? 0xff2200 : 0x00ffff;
+
     const armorMat = new THREE.MeshStandardMaterial({
-      color: 0x2a3344,
-      metalness: 0.85,
-      roughness: 0.25,
-    });
-    const accentMat = new THREE.MeshStandardMaterial({
-      color: teamColor,
-      metalness: 0.7,
+      color: primaryColor,
+      emissive: emissiveColor,
+      emissiveIntensity: 0.4,
+      metalness: 0.6,
       roughness: 0.3,
     });
 
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0xf5f7fb, // Clean white plating
+      metalness: 0.4,
+      roughness: 0.2,
+    });
+
     // Bulky Heavy Armor Torso
-    const torsoGeo = new THREE.BoxGeometry(1.2, 1.2, 0.7);
+    const torsoGeo = new THREE.BoxGeometry(1.25, 1.25, 0.75);
     const torso = new THREE.Mesh(torsoGeo, armorMat);
-    torso.position.y = 1.3;
+    torso.position.y = 1.4;
     torso.castShadow = true;
     this.model3D.add(torso);
     this.bodyMesh = torso;
 
+    // Heavy chest plate
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.2), trimMat);
+    chest.position.set(0, 1.5, 0.38);
+    this.model3D.add(chest);
+
     // Shoulder plates
-    const shoulderGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const leftShoulder = new THREE.Mesh(shoulderGeo, accentMat);
-    leftShoulder.position.set(-0.75, 1.6, 0);
-    const rightShoulder = new THREE.Mesh(shoulderGeo, accentMat);
-    rightShoulder.position.set(0.75, 1.6, 0);
+    const shoulderGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+    const leftShoulder = new THREE.Mesh(shoulderGeo, trimMat);
+    leftShoulder.position.set(-0.85, 1.7, 0);
+    const rightShoulder = new THREE.Mesh(shoulderGeo, trimMat);
+    rightShoulder.position.set(0.85, 1.7, 0);
     this.model3D.add(leftShoulder);
     this.model3D.add(rightShoulder);
 
+    // Heavy Tank Legs
+    const legGeo = new THREE.BoxGeometry(0.45, 0.85, 0.45);
+    const leftLeg = new THREE.Mesh(legGeo, armorMat);
+    leftLeg.position.set(-0.35, 0.45, 0);
+    const rightLeg = new THREE.Mesh(legGeo, armorMat);
+    rightLeg.position.set(0.35, 0.45, 0);
+    this.model3D.add(leftLeg);
+    this.model3D.add(rightLeg);
+
     // Heavy Helmet Head
-    const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const head = new THREE.Mesh(headGeo, armorMat);
-    head.position.y = 2.0;
+    const headGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+    const head = new THREE.Mesh(headGeo, trimMat);
+    head.position.y = 2.15;
     head.castShadow = true;
 
     // Glowing T-Visor
-    const visorMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.2), visorMat);
-    visor.position.set(0, 0, 0.2);
+    const visorMat = new THREE.MeshBasicMaterial({ color: visorColor });
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.2), visorMat);
+    visor.position.set(0, 0, 0.22);
     head.add(visor);
 
     this.model3D.add(head);
@@ -103,24 +124,35 @@ export class Vanguard extends HeroBase {
 
     // Heavy Flak Cannon
     const cannon = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.16, 1.0, 8),
+      new THREE.CylinderGeometry(0.14, 0.18, 1.1, 8),
       armorMat
     );
     cannon.rotation.x = Math.PI / 2;
-    cannon.position.set(0.65, 1.1, 0.4);
+    cannon.position.set(0.75, 1.2, 0.4);
     this.model3D.add(cannon);
 
+    // Enemy Red Aura ring
+    if (isRed) {
+      const aura = new THREE.Mesh(
+        new THREE.RingGeometry(0.9, 1.25, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff0022, side: THREE.DoubleSide })
+      );
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = 0.05;
+      this.model3D.add(aura);
+    }
+
     // Deployable Barrier representation
-    const barrierGeo = new THREE.BoxGeometry(3.2, 2.2, 0.1);
+    const barrierGeo = new THREE.BoxGeometry(3.6, 2.4, 0.1);
     const barrierMat = new THREE.MeshStandardMaterial({
-      color: this.team === 'blue' ? 0x00bbff : 0xff4433,
+      color: this.team === 'blue' ? 0x00c4ff : 0xff3344,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.55,
       roughness: 0.1,
       metalness: 0.9,
     });
     this.shieldMesh = new THREE.Mesh(barrierGeo, barrierMat);
-    this.shieldMesh.position.set(0, 1.4, 1.5);
+    this.shieldMesh.position.set(0, 1.5, 1.6);
     this.shieldMesh.visible = false;
     this.model3D.add(this.shieldMesh);
   }

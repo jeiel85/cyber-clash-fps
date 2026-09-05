@@ -7,7 +7,7 @@ export class ArenaMap {
   public physics: PhysicsWorld;
   public pickups: PickupManager;
 
-  // Materials
+  // Materials - Clean, high-visibility futuristic stadium aesthetic
   private floorMat: THREE.MeshStandardMaterial;
   private wallMat: THREE.MeshStandardMaterial;
   private accentMatBlue: THREE.MeshStandardMaterial;
@@ -21,38 +21,42 @@ export class ArenaMap {
     this.physics = physics;
     this.pickups = pickups;
 
-    // Initialize materials
+    // Bright, clean futuristic arena surfaces
     this.floorMat = new THREE.MeshStandardMaterial({
-      color: 0x141a29,
-      roughness: 0.6,
-      metalness: 0.3,
+      color: 0x92a5be, // Light clean sci-fi steel/composite
+      roughness: 0.45,
+      metalness: 0.25,
     });
 
     this.wallMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2638,
-      roughness: 0.5,
-      metalness: 0.4,
+      color: 0xd8e0ed, // Crisp bright stadium ceramic panels
+      roughness: 0.35,
+      metalness: 0.2,
     });
 
     this.accentMatBlue = new THREE.MeshStandardMaterial({
-      color: 0x0f3460,
+      color: 0x0088ff,
       roughness: 0.3,
-      metalness: 0.7,
+      metalness: 0.5,
+      emissive: 0x0044aa,
+      emissiveIntensity: 0.2,
     });
 
     this.accentMatRed = new THREE.MeshStandardMaterial({
-      color: 0x5a1827,
+      color: 0xff3344,
       roughness: 0.3,
-      metalness: 0.7,
+      metalness: 0.5,
+      emissive: 0xaa1122,
+      emissiveIntensity: 0.2,
     });
 
     this.neonMatCyan = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
     this.neonMatOrange = new THREE.MeshBasicMaterial({ color: 0xff7700 });
 
     this.glassMat = new THREE.MeshStandardMaterial({
-      color: 0x00aaff,
+      color: 0x00d4ff,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.4,
       roughness: 0.1,
       metalness: 0.9,
     });
@@ -68,13 +72,13 @@ export class ArenaMap {
       this.floorMat
     );
 
-    // Grid accent lines on floor
-    const grid = new THREE.GridHelper(100, 50, 0x00f0ff, 0x1a2640);
-    grid.position.y = 0.01;
+    // High-contrast clean grid lines on floor
+    const grid = new THREE.GridHelper(100, 50, 0x00e5ff, 0x768ba6);
+    grid.position.y = 0.02;
     this.scene.add(grid);
 
-    // 2. Outer Perimeter Boundary Walls (100m size, 12m height)
-    const wallH = 12;
+    // 2. Outer Perimeter Boundary Walls (100m size, 14m height)
+    const wallH = 14;
     // North (Red side back)
     this.createSolidBox(new THREE.Vector3(0, wallH / 2, -50), new THREE.Vector3(100, wallH, 4), this.wallMat);
     // South (Blue side back)
@@ -84,7 +88,7 @@ export class ArenaMap {
     // East
     this.createSolidBox(new THREE.Vector3(50, wallH / 2, 0), new THREE.Vector3(4, wallH, 100), this.wallMat);
 
-    // 3. Central Objective Podium (slightly raised 0.5m)
+    // 3. Central Objective Podium (clean elevated platform)
     this.createSolidBox(new THREE.Vector3(0, 0.25, 0), new THREE.Vector3(18, 0.5, 18), this.accentMatBlue);
 
     // 4. Blue Spawn Base Platform (South side, z = 38)
@@ -135,18 +139,16 @@ export class ArenaMap {
       this.createSolidBox(c.pos, c.size, this.wallMat);
     }
 
-    // 8. Jump Pads (Launch players into the air!)
+    // 8. Jump Pads
     this.createJumpPad(new THREE.Vector3(-16, 0.1, 16));
     this.createJumpPad(new THREE.Vector3(16, 0.1, 16));
     this.createJumpPad(new THREE.Vector3(-16, 0.1, -16));
     this.createJumpPad(new THREE.Vector3(16, 0.1, -16));
 
     // 9. Health Pickups
-    // Mega Health in high-risk side rooms (x = -36, z = 0) & (x = 36, z = 0)
     this.pickups.spawnPickup(new THREE.Vector3(-36, 0, 0), 'mega');
     this.pickups.spawnPickup(new THREE.Vector3(36, 0, 0), 'mega');
 
-    // Mini Health packs along spawn approach corridors
     this.pickups.spawnPickup(new THREE.Vector3(-16, 0, 24), 'mini');
     this.pickups.spawnPickup(new THREE.Vector3(16, 0, 24), 'mini');
     this.pickups.spawnPickup(new THREE.Vector3(-16, 0, -24), 'mini');
@@ -177,18 +179,16 @@ export class ArenaMap {
     const group = new THREE.Group();
     group.position.copy(pos);
 
-    // Circular pad base
     const baseGeo = new THREE.CylinderGeometry(2.0, 2.2, 0.2, 24);
     const baseMat = new THREE.MeshStandardMaterial({
-      color: 0x222222,
-      metalness: 0.8,
-      roughness: 0.2,
+      color: 0x334455,
+      metalness: 0.6,
+      roughness: 0.3,
     });
     const base = new THREE.Mesh(baseGeo, baseMat);
     base.position.y = 0.1;
     group.add(base);
 
-    // Glowing launch arrow ring
     const ringGeo = new THREE.RingGeometry(1.2, 1.8, 24);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffaa00,
@@ -199,12 +199,11 @@ export class ArenaMap {
     ring.position.y = 0.21;
     group.add(ring);
 
-    // Upward beam glow
     const beamGeo = new THREE.CylinderGeometry(0.8, 1.4, 4, 16);
     const beamMat = new THREE.MeshBasicMaterial({
       color: 0xffaa00,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.35,
     });
     const beam = new THREE.Mesh(beamGeo, beamMat);
     beam.position.y = 2;

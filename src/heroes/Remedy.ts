@@ -51,61 +51,100 @@ export class Remedy extends HeroBase {
   }
 
   protected createThirdPersonModel(): void {
-    const teamColor = this.team === 'blue' ? 0x00ccaa : 0xee55aa;
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0xddf0ee,
-      metalness: 0.3,
-      roughness: 0.4,
+    const isRed = this.team === 'red';
+    const primaryColor = isRed ? 0xff2244 : 0x00d4ff;
+    const emissiveColor = isRed ? 0xcc0022 : 0x0088cc;
+    const wingColor = isRed ? 0xff1133 : 0x00ffaa;
+    const haloColor = isRed ? 0xff2200 : 0x00ffcc;
+
+    const suitMat = new THREE.MeshStandardMaterial({
+      color: primaryColor,
+      emissive: emissiveColor,
+      emissiveIntensity: 0.4,
+      metalness: 0.4,
+      roughness: 0.3,
     });
+
+    const whiteMat = new THREE.MeshStandardMaterial({
+      color: 0xf6f9fc, // Clean pearl white
+      metalness: 0.3,
+      roughness: 0.2,
+    });
+
     const wingMat = new THREE.MeshBasicMaterial({
-      color: teamColor,
+      color: wingColor,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
       side: THREE.DoubleSide,
     });
 
     // Torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.85, 0.35), bodyMat);
-    torso.position.y = 1.1;
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.38), whiteMat);
+    torso.position.y = 1.15;
     torso.castShadow = true;
     this.model3D.add(torso);
     this.bodyMesh = torso;
 
-    // Head with halo / headset
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), bodyMat);
-    head.position.y = 1.7;
+    // Chest emblem
+    const emblem = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.12), suitMat);
+    emblem.position.set(0, 1.25, 0.18);
+    this.model3D.add(emblem);
+
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.24, 0.8, 0.26);
+    const leftLeg = new THREE.Mesh(legGeo, suitMat);
+    leftLeg.position.set(-0.18, 0.4, 0);
+    const rightLeg = new THREE.Mesh(legGeo, suitMat);
+    rightLeg.position.set(0.18, 0.4, 0);
+    this.model3D.add(leftLeg);
+    this.model3D.add(rightLeg);
+
+    // Head with halo
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.38), whiteMat);
+    head.position.y = 1.8;
     head.castShadow = true;
 
     // Halo
     const halo = new THREE.Mesh(
-      new THREE.RingGeometry(0.22, 0.28, 16),
-      new THREE.MeshBasicMaterial({ color: 0x00ffcc, side: THREE.DoubleSide })
+      new THREE.RingGeometry(0.22, 0.3, 16),
+      new THREE.MeshBasicMaterial({ color: haloColor, side: THREE.DoubleSide })
     );
     halo.rotation.x = -Math.PI / 2;
-    halo.position.y = 0.28;
+    halo.position.y = 0.3;
     head.add(halo);
 
     this.model3D.add(head);
     this.headMesh = head;
 
     // Holographic Energy Wings
-    const leftWing = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.2), wingMat);
-    leftWing.position.set(-0.5, 1.4, -0.2);
+    const leftWing = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.4), wingMat);
+    leftWing.position.set(-0.55, 1.45, -0.2);
     leftWing.rotation.z = -0.5;
-    const rightWing = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.2), wingMat);
-    rightWing.position.set(0.5, 1.4, -0.2);
+    const rightWing = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.4), wingMat);
+    rightWing.position.set(0.55, 1.45, -0.2);
     rightWing.rotation.z = 0.5;
     this.model3D.add(leftWing);
     this.model3D.add(rightWing);
 
-    // Caduceus Staff / Blaster
+    // Caduceus Staff
     const staff = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.04, 1.1, 8),
+      new THREE.CylinderGeometry(0.04, 0.04, 1.2, 8),
       new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.8 })
     );
     staff.rotation.x = Math.PI / 4;
-    staff.position.set(0.4, 0.9, 0.4);
+    staff.position.set(0.42, 0.95, 0.4);
     this.model3D.add(staff);
+
+    // Enemy Red Aura ring
+    if (isRed) {
+      const aura = new THREE.Mesh(
+        new THREE.RingGeometry(0.55, 0.85, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff0022, side: THREE.DoubleSide })
+      );
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = 0.05;
+      this.model3D.add(aura);
+    }
   }
 
   protected createFirstPersonWeapon(): void {

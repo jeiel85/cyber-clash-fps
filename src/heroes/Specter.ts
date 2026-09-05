@@ -49,34 +49,55 @@ export class Specter extends HeroBase {
   }
 
   protected createThirdPersonModel(): void {
-    const teamColor = this.team === 'blue' ? 0x2288ff : 0xee2255;
-    const stealthMat = new THREE.MeshStandardMaterial({
-      color: 0x151520,
-      metalness: 0.7,
+    const isRed = this.team === 'red';
+    const primaryColor = isRed ? 0xff2244 : 0x3377ff;
+    const emissiveColor = isRed ? 0xcc0022 : 0x1144cc;
+    const lensColor = isRed ? 0xff0033 : 0x00f0ff;
+
+    const suitMat = new THREE.MeshStandardMaterial({
+      color: primaryColor,
+      emissive: emissiveColor,
+      emissiveIntensity: 0.4,
+      metalness: 0.5,
       roughness: 0.3,
     });
-    const accentMat = new THREE.MeshStandardMaterial({
-      color: teamColor,
-      metalness: 0.8,
+
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0xf5f7fb, // Clean silver/white armor plates
+      metalness: 0.5,
       roughness: 0.2,
     });
 
     // Slender Body
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.85, 0.35), stealthMat);
-    torso.position.y = 1.1;
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.85, 0.38), suitMat);
+    torso.position.y = 1.15;
     torso.castShadow = true;
     this.model3D.add(torso);
     this.bodyMesh = torso;
 
+    // Sniper chest harness
+    const harness = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 0.15), trimMat);
+    harness.position.set(0, 1.25, 0.18);
+    this.model3D.add(harness);
+
+    // Slender Legs
+    const legGeo = new THREE.BoxGeometry(0.24, 0.8, 0.26);
+    const leftLeg = new THREE.Mesh(legGeo, suitMat);
+    leftLeg.position.set(-0.18, 0.4, 0);
+    const rightLeg = new THREE.Mesh(legGeo, suitMat);
+    rightLeg.position.set(0.18, 0.4, 0);
+    this.model3D.add(leftLeg);
+    this.model3D.add(rightLeg);
+
     // Head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), stealthMat);
-    head.position.y = 1.7;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.38), trimMat);
+    head.position.y = 1.8;
     head.castShadow = true;
 
     // Red/Cyan Monocle / Sniper Visor
     const lens = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.08, 0.1, 12),
-      new THREE.MeshBasicMaterial({ color: 0xff0055 })
+      new THREE.CylinderGeometry(0.09, 0.09, 0.12, 12),
+      new THREE.MeshBasicMaterial({ color: lensColor })
     );
     lens.rotation.x = Math.PI / 2;
     lens.position.set(0.1, 0.05, 0.2);
@@ -87,12 +108,23 @@ export class Specter extends HeroBase {
 
     // Long Sniper Railgun in hands
     const rifle = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.15, 1.4),
-      accentMat
+      new THREE.BoxGeometry(0.14, 0.18, 1.45),
+      suitMat
     );
-    rifle.position.set(0.35, 1.0, 0.5);
+    rifle.position.set(0.38, 1.05, 0.5);
     rifle.castShadow = true;
     this.model3D.add(rifle);
+
+    // Enemy Red Aura ring
+    if (isRed) {
+      const aura = new THREE.Mesh(
+        new THREE.RingGeometry(0.55, 0.85, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff0022, side: THREE.DoubleSide })
+      );
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = 0.05;
+      this.model3D.add(aura);
+    }
   }
 
   protected createFirstPersonWeapon(): void {

@@ -61,6 +61,11 @@ export abstract class HeroBase {
   protected headMesh?: THREE.Mesh;
   protected bodyMesh?: THREE.Mesh;
 
+  // Overhead Health Bar & Nameplate Sprite
+  private nameplateSprite?: THREE.Sprite;
+  private nameplateCanvas?: HTMLCanvasElement;
+  private nameplateTexture?: THREE.CanvasTexture;
+
   // Physics & World reference
   public physics: PhysicsWorld;
   public scene: THREE.Scene;
@@ -112,6 +117,8 @@ export abstract class HeroBase {
     this.fpWeaponMesh = new THREE.Group();
 
     this.createThirdPersonModel();
+    this.setupOverheadNameplate();
+
     if (this.isLocalPlayer) {
       this.createFirstPersonWeapon();
     } else {
@@ -127,6 +134,83 @@ export abstract class HeroBase {
   public abstract useAbilityShift(direction: THREE.Vector3): void;
   public abstract useAbilityE(direction: THREE.Vector3): void;
   public abstract useUltimate(): void;
+
+  // 3D Overhead Health Bar & Nameplate
+  private setupOverheadNameplate(): void {
+    if (this.isLocalPlayer) return; // Local player has screen HUD
+
+    this.nameplateCanvas = document.createElement('canvas');
+    this.nameplateCanvas.width = 256;
+    this.nameplateCanvas.height = 96;
+
+    this.nameplateTexture = new THREE.CanvasTexture(this.nameplateCanvas);
+    this.nameplateTexture.minFilter = THREE.LinearFilter;
+
+    const spriteMat = new THREE.SpriteMaterial({
+      map: this.nameplateTexture,
+      transparent: true,
+      depthTest: false, // Visible through obstacles if targeted
+    });
+
+    this.nameplateSprite = new THREE.Sprite(spriteMat);
+    this.nameplateSprite.scale.set(2.4, 0.9, 1);
+    this.nameplateSprite.position.set(0, 2.5, 0);
+
+    this.model3D.add(this.nameplateSprite);
+    this.updateOverheadNameplate();
+  }
+
+  public updateOverheadNameplate(): void {
+    if (!this.nameplateCanvas || !this.nameplateTexture) return;
+
+    const ctx = this.nameplateCanvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, 256, 96);
+
+    const isEnemy = this.team === 'red';
+    const primaryColor = isEnemy ? '#ff2244' : '#00aaff';
+    const teamBadge = isEnemy ? 'RED TEAM' : 'BLUE TEAM';
+
+    // Rounded background box
+    ctx.fillStyle = 'rgba(8, 14, 26, 0.88)';
+    ctx.beginPath();
+    ctx.roundRect(8, 8, 240, 80, 8);
+    ctx.fill();
+
+    // Border
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = primaryColor;
+    ctx.stroke();
+
+    // Name & Team label
+    ctx.font = 'bold 20px Rajdhani, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${this.name.toUpperCase()} [${this.heroType.toUpperCase()}]`, 20, 36);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = primaryColor;
+    ctx.fillText(teamBadge, 175, 36);
+
+    // Health bar background
+    ctx.fillStyle = '#222938';
+    ctx.fillRect(20, 46, 216, 16);
+
+    // Health bar fill
+    const totalHp = Math.max(0, this.health + this.shield);
+    const maxTotal = this.maxHealth + this.maxShield;
+    const hpPct = Math.min(1, Math.max(0, totalHp / maxTotal));
+
+    ctx.fillStyle = isEnemy ? '#ff3344' : '#00ff88';
+    ctx.fillRect(20, 46, 216 * hpPct, 16);
+
+    // HP Text
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${Math.ceil(totalHp)} / ${maxTotal}`, 105, 59);
+
+    this.nameplateTexture.needsUpdate = true;
+  }
 
   public update(dt: number): void {
     if (!this.isAlive) {
@@ -176,6 +260,7 @@ export abstract class HeroBase {
     // Shield auto-recharge if unhit for 4s
     if (this.shield < this.maxShield) {
       this.shield = Math.min(this.maxShield, this.shield + 20 * dt);
+      this.updateOverheadNameplate();
     }
 
     // Update 3D Model position & orientation
@@ -209,6 +294,7 @@ export abstract class HeroBase {
     }
 
     this.health -= dmg;
+    this.updateOverheadNameplate();
 
     if (attacker) {
       attacker.damageDealt += amount;
@@ -229,6 +315,7 @@ export abstract class HeroBase {
     const missing = this.maxHealth - this.health;
     const actualHeal = Math.min(missing, amount);
     this.health += actualHeal;
+    this.updateOverheadNameplate();
 
     if (healer && healer !== this) {
       healer.healingDone += actualHeal;
@@ -256,6 +343,7 @@ export abstract class HeroBase {
     this.ammo = this.maxAmmo;
     this.isReloading = false;
     this.model3D.visible = !this.isLocalPlayer;
+    this.updateOverheadNameplate();
 
     // Respawn position
     const spawnZ = this.team === 'blue' ? 38 : -38;
@@ -264,7 +352,6 @@ export abstract class HeroBase {
     this.velocity.set(0, 0, 0);
   }
 
-  // Visual helper: Weapon recoil jerk
   protected triggerWeaponRecoil(): void {
     if (!this.isLocalPlayer || !this.fpWeaponMesh) return;
     this.fpWeaponMesh.position.z += 0.08;
@@ -273,7 +360,6 @@ export abstract class HeroBase {
 
   public updateWeaponBobbing(isMoving: boolean, dt: number): void {
     if (!this.isLocalPlayer || !this.fpWeaponMesh) return;
-    // Return to resting position
     this.fpWeaponMesh.position.z += (0 - this.fpWeaponMesh.position.z) * 10 * dt;
     this.fpWeaponMesh.rotation.x += (0 - this.fpWeaponMesh.rotation.x) * 10 * dt;
 

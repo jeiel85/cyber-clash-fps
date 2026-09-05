@@ -50,48 +50,81 @@ export class Striker extends HeroBase {
   }
 
   protected createThirdPersonModel(): void {
-    const teamColor = this.team === 'blue' ? 0x00aaff : 0xff3344;
+    const isRed = this.team === 'red';
+    const primaryColor = isRed ? 0xff2244 : 0x0088ff;
+    const emissiveColor = isRed ? 0xcc0022 : 0x0044bb;
+    const visorColor = isRed ? 0xff3300 : 0x00f0ff;
+
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: teamColor,
-      metalness: 0.6,
-      roughness: 0.4,
+      color: primaryColor,
+      emissive: emissiveColor,
+      emissiveIntensity: 0.4,
+      metalness: 0.5,
+      roughness: 0.3,
     });
-    const armorMat = new THREE.MeshStandardMaterial({
-      color: 0x1a2233,
-      metalness: 0.8,
+
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0xf5f7fb, // Crisp white armor trim
+      metalness: 0.4,
       roughness: 0.2,
     });
 
     // Body (Torso)
-    const torsoGeo = new THREE.BoxGeometry(0.7, 0.9, 0.4);
-    const torso = new THREE.Mesh(torsoGeo, bodyMat);
-    torso.position.y = 1.1;
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.85, 0.45), bodyMat);
+    torso.position.y = 1.15;
     torso.castShadow = true;
     this.model3D.add(torso);
     this.bodyMesh = torso;
 
+    // Chest armor plate (High contrast)
+    const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.15), trimMat);
+    chestPlate.position.set(0, 1.25, 0.22);
+    this.model3D.add(chestPlate);
+
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.28, 0.75, 0.3);
+    const leftLeg = new THREE.Mesh(legGeo, bodyMat);
+    leftLeg.position.set(-0.2, 0.4, 0);
+    const rightLeg = new THREE.Mesh(legGeo, bodyMat);
+    rightLeg.position.set(0.2, 0.4, 0);
+    this.model3D.add(leftLeg);
+    this.model3D.add(rightLeg);
+
     // Head
-    const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-    const head = new THREE.Mesh(headGeo, armorMat);
-    head.position.y = 1.75;
+    const headGeo = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+    const head = new THREE.Mesh(headGeo, trimMat);
+    head.position.y = 1.8;
     head.castShadow = true;
 
-    // Visor glow
-    const visorGeo = new THREE.BoxGeometry(0.35, 0.1, 0.15);
-    const visorMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+    // Glowing Visor
+    const visorGeo = new THREE.BoxGeometry(0.36, 0.12, 0.18);
+    const visorMat = new THREE.MeshBasicMaterial({ color: visorColor });
     const visor = new THREE.Mesh(visorGeo, visorMat);
-    visor.position.set(0, 0.05, 0.18);
+    visor.position.set(0, 0.04, 0.2);
     head.add(visor);
 
     this.model3D.add(head);
     this.headMesh = head;
 
     // Weapon in hand
-    const gunGeo = new THREE.BoxGeometry(0.15, 0.2, 0.9);
-    const gun = new THREE.Mesh(gunGeo, armorMat);
-    gun.position.set(0.45, 1.0, 0.35);
+    const gunGeo = new THREE.BoxGeometry(0.16, 0.22, 0.95);
+    const gun = new THREE.Mesh(gunGeo, bodyMat);
+    gun.position.set(0.48, 1.05, 0.35);
     gun.castShadow = true;
     this.model3D.add(gun);
+
+    // Overwatch-style Red Aura beacon for enemies
+    if (isRed) {
+      const auraGeo = new THREE.RingGeometry(0.6, 0.9, 16);
+      const auraMat = new THREE.MeshBasicMaterial({
+        color: 0xff0022,
+        side: THREE.DoubleSide,
+      });
+      const aura = new THREE.Mesh(auraGeo, auraMat);
+      aura.rotation.x = -Math.PI / 2;
+      aura.position.y = 0.05;
+      this.model3D.add(aura);
+    }
   }
 
   protected createFirstPersonWeapon(): void {
