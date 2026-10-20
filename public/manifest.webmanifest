@@ -1,0 +1,31 @@
+{
+  "name": "CYBER CLASH: 3D HERO FPS",
+  "short_name": "CYBER CLASH",
+  "description": "AI 봇과 P2P 멀티플레이로 즐기는 브라우저 3D 히어로 FPS",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080b12",
+  "theme_color": "#080b12",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
