@@ -418,7 +418,8 @@
     <!-- Script Entry Point -->
     <script type="module" src="./src/main.ts"></script>
     <script>
-      if ('serviceWorker' in navigator) {
+      // 아래 PROD 자리표시자는 Vite가 빌드 때 'true'로, 개발 서버에서는 'false'로 바꾼다(개발 중 소스 모듈이 SW에 캐시되지 않게).
+      if ('%PROD%' === 'true' && 'serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('서비스워커 등록 실패:', err));
         });

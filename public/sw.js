@@ -1,7 +1,9 @@
 /* CYBER CLASH: 3D HERO FPS 서비스워커
  * - 내비게이션: network-first, 실패 시 캐시된 index.html
  * - 같은 출처 정적 자산(GET): stale-while-revalidate
- * - 프리캐시는 셸(index.html·manifest·아이콘)만. 그 외 자산은 처음 쓸 때 캐시된다.
+ * - 프리캐시는 셸(index.html·manifest·아이콘)과 index.html이 직접 불러오는 같은 출처 스크립트·스타일시트뿐.
+ *   (첫 방문에서는 SW가 load 이후 등록되어 번들 요청을 보지 못하므로, 설치 직후 오프라인 실행이 되도록 함께 받는다.)
+ *   그 밖의 자산(오디오·모델 등)은 처음 쓸 때 캐시된다.
  * 배포 내용이 바뀌어 캐시를 강제로 비워야 하면 CACHE_VERSION을 올린다.
  */
 const CACHE_VERSION = 'v1';
@@ -16,12 +18,29 @@ const PRECACHE = [
   './icons/apple-touch-icon.png',
 ];
 
+// index.html의 <script src>·<link rel="stylesheet|modulepreload" href> 중 같은 출처 주소
+function entryAssetUrls(html) {
+  const urls = new Set();
+  const tags = html.match(/<(?:script|link)\b[^>]*>/gi) || [];
+  for (const tag of tags) {
+    if (/^<link/i.test(tag) && !/\brel=["']?(?:stylesheet|modulepreload)\b/i.test(tag)) continue;
+    const m = tag.match(/\s(?:src|href)=["']([^"']+)["']/i);
+    if (!m) continue;
+    const url = new URL(m[1], self.registration.scope);
+    if (url.origin === self.location.origin) urls.add(url.href);
+  }
+  return [...urls];
+}
+
+async function precache() {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.addAll(PRECACHE);
+  const index = await cache.match('./index.html');
+  if (index) await cache.addAll(entryAssetUrls(await index.text()));
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(precache().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
