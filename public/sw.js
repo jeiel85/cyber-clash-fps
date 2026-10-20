@@ -55,34 +55,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function putIfOk(request, response) {
-  if (response && response.ok && response.type === 'basic') {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
-  }
-  return response;
+// 캐시 저장은 부가 작업이다. 용량 초과 등으로 실패해도 받은 응답은 그대로 페이지에 전달한다.
+function cacheInBackground(event, key, response) {
+  if (!response || !response.ok || response.type !== 'basic') return;
+  const copy = response.clone();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.put(key, copy))
+      .catch((err) => console.warn('[sw] 캐시 저장 실패:', err))
+  );
 }
 
-async function networkFirstNavigation(request) {
+async function networkFirstNavigation(event) {
+  let response;
   try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put('./index.html', response.clone());
-    }
-    return response;
+    response = await fetch(event.request);
   } catch (err) {
     const cached = (await caches.match('./index.html')) || (await caches.match('./'));
     if (cached) return cached;
     throw err;
   }
+  cacheInBackground(event, './index.html', response);
+  return response;
 }
 
 async function staleWhileRevalidate(event) {
-  const { request } = event;
-  const cached = await caches.match(request);
-  const network = fetch(request).then((response) => putIfOk(request, response));
+  const cached = await caches.match(event.request);
+  const network = fetch(event.request).then((response) => {
+    cacheInBackground(event, event.request, response);
+    return response;
+  });
   if (cached) {
+    // 캐시로 이미 응답했으므로 백그라운드 갱신 실패(오프라인 등)는 무시한다.
     event.waitUntil(network.catch(() => undefined));
     return cached;
   }
@@ -98,7 +102,7 @@ self.addEventListener('fetch', (event) => {
   if (request.headers.has('range')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirstNavigation(request));
+    event.respondWith(networkFirstNavigation(event));
     return;
   }
   event.respondWith(staleWhileRevalidate(event));
